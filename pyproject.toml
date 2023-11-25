@@ -1,0 +1,15 @@
+[project]
+name = "MyFTP"
+version = "0.1.0"
+description = "An FTP server/client implementation written in Python. Supports both UDP and TCP."
+authors = [
+    {name = "minhtrannhat", email = "minh@minhtrannhat.com"},
+]
+dependencies = []
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
