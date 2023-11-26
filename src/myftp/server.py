@@ -47,7 +47,11 @@ def init():
     parser = ArgumentParser(description="A FTP server written in Python")
 
     parser.add_argument(
-        "port_number", type=int, help="Port number for the server. Default = 12000"
+        "--port_number",
+        default=12000,
+        required=False,
+        type=int,
+        help="Port number for the server. Default = 12000",
     )
 
     parser.add_argument(
