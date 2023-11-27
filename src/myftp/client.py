@@ -38,6 +38,7 @@ class UDPClient:
                         f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change and help"
                     )
 
+                # handling the "bye" command
                 if command == "bye":
                     client_socket.close()
                     print(f"myftp> - {self.mode} - Session is terminated")

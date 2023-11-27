@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+  ftp_server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    networks:
+      - mynetwork
+    command:
+      - sh
+      - -c
+      - >
+        sleep 10 &&
+        echo "My IP: $(hostname -i)" &&
+        tail -f /dev/null
+    image: ftp_server:latest
+
+  ftp_client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    networks:
+      - mynetwork
+    command:
+      - sh
+      - -c
+      - >
+        sleep 10 &&
+        echo "My IP: $(hostname -i)" &&
+        tail -f /dev/null
+    image: ftp_client:latest
+
+networks:
+  mynetwork:

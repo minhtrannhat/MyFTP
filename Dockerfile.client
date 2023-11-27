@@ -1,0 +1,17 @@
+# Use the official Python image
+FROM python:3.11
+
+# Expose the specified port
+EXPOSE 12000
+
+# Create and set the working directory
+WORKDIR /app
+
+# Copy the local app files to the container
+COPY ./src/myftp /app
+
+RUN dd if=/dev/urandom of=/app/file_local.txt bs=1024 count=10
+RUN dd if=/dev/urandom of=/app/image_local.png bs=1024 count=50
+
+# Start your Python application
+#CMD python client.py --debug 1

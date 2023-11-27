@@ -60,6 +60,14 @@ def init():
     )
 
     parser.add_argument(
+        "--ip_addr",
+        default="0.0.0.0",
+        required=False,
+        type=str,
+        help="Port number for the server. Default = 12000",
+    )
+
+    parser.add_argument(
         "--debug",
         type=int,
         choices=[0, 1],
@@ -76,7 +84,7 @@ def init():
 
     # UDP client selected here
     if protocol_selection == "2":
-        udp_server = UDPServer("127.0.0.1", args.port_number, args.debug)
+        udp_server = UDPServer(args.ip_addr, args.port_number, args.debug)
 
         udp_server.run()
 
