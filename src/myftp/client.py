@@ -2,6 +2,7 @@ from socket import socket, AF_INET, SOCK_DGRAM
 from typing import Tuple
 from argparse import ArgumentParser
 import os
+import pickle
 
 # custome type to represent the hostname(server name) and the server port
 Address = Tuple[str, int]
@@ -34,10 +35,11 @@ class UDPClient:
                     "summary",
                     "change",
                     "help",
+                    "list",
                     "bye",
                 ]:
                     print(
-                        f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change and help"
+                        f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change, list and help"
                     )
 
                 # handling the "bye" command
@@ -45,6 +47,14 @@ class UDPClient:
                     client_socket.close()
                     print(f"myftp> - {self.mode} - Session is terminated")
                     break
+
+                elif command == "list":
+                    client_socket.send(command.encode())
+                    encoded_message, server_address = client_socket.recvfrom(4096)
+                    file_list = pickle.loads(encoded_message)
+                    print(f"Received file list from {server_address}: {file_list}")
+                    client_socket.close()
+                    continue
 
                 client_socket.send(command.encode())
                 modified_message = client_socket.recv(2048)

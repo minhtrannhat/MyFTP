@@ -1,13 +1,17 @@
 from socket import socket, AF_INET, SOCK_DGRAM
 from argparse import ArgumentParser
 import os
+import pickle
 
 
 class UDPServer:
-    def __init__(self, server_name: str, server_port: int, debug: bool) -> None:
+    def __init__(
+        self, server_name: str, server_port: int, directory_path: str, debug: bool
+    ) -> None:
         self.server_name = server_name
         self.server_port = server_port
         self.mode: str = "UDP"
+        self.directory_path = directory_path
         self.debug = debug
 
     def run(self):
@@ -31,6 +35,14 @@ class UDPServer:
 
                 if message_in_utf8 == "ping":
                     response_message = "pong"
+
+                elif message_in_utf8 == "list":
+                    encoded_message = pickle.dumps(
+                        get_files_in_directory(self.directory_path)
+                    )
+                    self.server_socket.sendto(encoded_message, clientAddress)
+                    continue
+
                 else:
                     response_message = message_in_utf8.upper()
 
@@ -49,7 +61,15 @@ class UDPServer:
             print(f"myftp> - {self.mode} - Closed the server socket\n")
 
 
-def check_directory(path):
+def get_files_in_directory(directory_path: str) -> list[str]:
+    file_list = []
+    for root, _, files in os.walk(directory_path):
+        for file in files:
+            file_list.append(file)
+    return file_list
+
+
+def check_directory(path: str) -> bool:
     if os.path.exists(path):
         if os.path.isdir(path):
             if os.access(path, os.R_OK) and os.access(path, os.W_OK):
@@ -109,7 +129,9 @@ def init():
 
     # UDP client selected here
     if protocol_selection == "2":
-        udp_server = UDPServer(args.ip_addr, args.port_number, args.debug)
+        udp_server = UDPServer(
+            args.ip_addr, args.port_number, args.directory, args.debug
+        )
 
         udp_server.run()
 
