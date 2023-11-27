@@ -6,6 +6,7 @@ class UDPServer:
     def __init__(self, server_name: str, server_port: int, debug: bool) -> None:
         self.server_name = server_name
         self.server_port = server_port
+        self.mode: str = "UDP"
         self.debug = debug
 
     def run(self):
@@ -13,7 +14,7 @@ class UDPServer:
         self.server_socket.bind((self.server_name, self.server_port))
 
         print(
-            f"server is ready to receive at {self.server_name}:{self.server_port}"
+            f"myftp> - {self.mode} - server is ready to receive at {self.server_name}:{self.server_port}"
         ) if self.debug else None
 
         shut_down = False
@@ -24,7 +25,7 @@ class UDPServer:
                 message_in_utf8 = message.decode()
 
                 print(
-                    f"received message from client at {clientAddress}: {message_in_utf8}"
+                    f"myftp> - {self.mode} - received message from client at {clientAddress}: {message_in_utf8}"
                 ) if self.debug else None
 
                 if message_in_utf8 == "ping":
@@ -32,15 +33,19 @@ class UDPServer:
                 else:
                     response_message = message_in_utf8.upper()
 
+                print(
+                    f"myftp> - {self.mode} - sent message to client at {clientAddress}: {response_message}"
+                ) if self.debug else None
+
                 self.server_socket.sendto(response_message.encode(), clientAddress)
 
         except KeyboardInterrupt:
             shut_down = True
             self.server_socket.close()
-            print("Server shutting down\n")
+            print(f"myftp> - {self.mode} - Server shutting down\n")
 
         finally:
-            print("Closed the server socket\n")
+            print(f"myftp> - {self.mode} - Closed the server socket\n")
 
 
 def init():
