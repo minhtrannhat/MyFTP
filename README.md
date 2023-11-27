@@ -20,16 +20,18 @@ You can run `python3 src/myftp/server.py --directory <insert valid directory tha
 
 ### Dependencies
 
-`docker` and `docker-compose`
+- `docker`
+- `docker-compose`
+- `make`
 
 ### Setup
 
 - Make you are at the root of this repo.
-- Build the system with `docker-compose up --build --remove-orphans`.
+- Build the system with `make build`.
 - Wait 10 seconds.
 - 2 containers will be created on the same network `mynetwork`. Their respective IP addresses will be printed to stdout.
 - Open two terminal windows: one for each of server and client.
-- Run the server with `docker exec -it project-ftp_server_1 python server.py --directory /server_directory <insert any other flags here>`.
-- Run the client with `docker exec -it project-ftp_client_1 python client.py --directory /client_directory <insert any flags here>`.
+- Run the server with `make server` in a terminal.
+- Run the client with `make client` in a terminal.
 - For the client, when asked to put in the ip address and port number of the server, you can put in `ftp_server 12000` or adjust to your chosen port number. The IP address is resolved by Docker so ftp_server can not be changed.
-- Tear down everything with `docker-compose down`.
+- Tear down everything with `make clean`.

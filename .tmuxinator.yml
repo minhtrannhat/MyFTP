@@ -54,6 +54,6 @@ windows:
       layout: main-vertical
       root: ~/Desktop/University/Fall2023_Classes/COEN366/project
       panes:
-        - docker-compose up --build --remove-orphans
-        - sleep 15 && docker exec -it project-ftp_client-1 python client.py --debug 1
-        - sleep 15 && docker exec -it project-ftp_server-1 python server.py --port_number 12000 --debug 1
+        - make build
+        - sleep 15 && make client
+        - sleep 15 && make server
