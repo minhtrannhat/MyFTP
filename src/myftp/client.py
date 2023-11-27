@@ -23,20 +23,36 @@ class UDPClient:
 
         client_socket.connect((self.server_name, self.server_port))
 
-        message = input("input lowercase sentence: ")
+        while True:
+            try:
+                # get command from user
+                while (command := input(f"myftp> - {self.mode} - : ")) not in [
+                    "put",
+                    "get",
+                    "summary",
+                    "change",
+                    "help",
+                    "bye",
+                ]:
+                    print(
+                        f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change and help"
+                    )
 
-        client_socket.send(message.encode())
+                if command == "bye":
+                    client_socket.close()
+                    print(f"myftp> - {self.mode} - Session is terminated")
+                    break
 
-        try:
-            modified_message = client_socket.recv(2048)
-            print(modified_message.decode())
+                client_socket.send(command.encode())
+                modified_message = client_socket.recv(2048)
+                print(modified_message.decode())
 
-        except ConnectionRefusedError:
-            print(
-                f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
-            )
-        finally:
-            client_socket.close()
+            except ConnectionRefusedError:
+                print(
+                    f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
+                )
+            finally:
+                client_socket.close()
 
     # ping pong UDP
     def check_udp_server(self):
@@ -55,7 +71,7 @@ class UDPClient:
 
             # If the server responds, consider the address valid
             print(
-                f"myftp> - {self.mode} - Server at {self.server_name} is valid. Response received: {data.decode('utf-8')}"
+                f"myftp> - {self.mode} - Server at {self.server_name}:{self.server_port} is valid. Response received: {data.decode('utf-8')}"
             )
 
             # code reached here meaning no problem with the connection
