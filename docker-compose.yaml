@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.server
+    volumes:
+      - ./src/myftp:/server:ro
     networks:
       - mynetwork
     command:
@@ -22,6 +24,8 @@ services:
       dockerfile: Dockerfile.client
     networks:
       - mynetwork
+    volumes:
+      - ./src/myftp:/client:ro
     command:
       - sh
       - -c

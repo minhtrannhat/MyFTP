@@ -5,13 +5,12 @@ FROM python:3.11
 EXPOSE 12000
 
 # Create and set the working directory
-WORKDIR /app
+WORKDIR /client
 
-# Copy the local app files to the container
-COPY ./src/myftp /app
-
-RUN dd if=/dev/urandom of=/app/file_local.txt bs=1024 count=10
-RUN dd if=/dev/urandom of=/app/image_local.png bs=1024 count=50
+# Copy the local  client to the container
+RUN mkdir /client_directory
+RUN dd if=/dev/urandom of=/client_directory/file_local.txt bs=1024 count=10
+RUN dd if=/dev/urandom of=/client_directory/image_local.png bs=1024 count=50
 
 # Start your Python application
 #CMD python client.py --debug 1

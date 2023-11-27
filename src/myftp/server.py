@@ -1,5 +1,6 @@
 from socket import socket, AF_INET, SOCK_DGRAM
 from argparse import ArgumentParser
+import os
 
 
 class UDPServer:
@@ -48,6 +49,20 @@ class UDPServer:
             print(f"myftp> - {self.mode} - Closed the server socket\n")
 
 
+def check_directory(path):
+    if os.path.exists(path):
+        if os.path.isdir(path):
+            if os.access(path, os.R_OK) and os.access(path, os.W_OK):
+                return True
+            else:
+                print(f"Error: The directory '{path}' is not readable or writable.")
+        else:
+            print(f"Error: '{path}' is not a directory.")
+    else:
+        print(f"Error: The directory '{path}' does not exist.")
+    return False
+
+
 def init():
     parser = ArgumentParser(description="A FTP server written in Python")
 
@@ -57,6 +72,10 @@ def init():
         required=False,
         type=int,
         help="Port number for the server. Default = 12000",
+    )
+
+    parser.add_argument(
+        "--directory", required=True, type=str, help="Path to the server directory"
     )
 
     parser.add_argument(
@@ -81,6 +100,12 @@ def init():
         protocol_selection := input("myftp>Press 1 for TCP, Press 2 for UDP\n")
     ) not in {"1", "2"}:
         print("myftp>Invalid choice. Press 1 for TCP, Press 2 for UDP")
+
+    if not check_directory(args.directory):
+        print(
+            f"The directory '{args.directory}' does not exists or is not readable/writable."
+        )
+        return
 
     # UDP client selected here
     if protocol_selection == "2":
