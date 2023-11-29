@@ -1,8 +1,16 @@
 from socket import socket, AF_INET, SOCK_DGRAM
-from typing import Tuple
+from typing import Pattern, Tuple
 from argparse import ArgumentParser
 import os
 import pickle
+import re
+
+# patterns for command matchings
+# compiled for extra performance
+get_command_pattern: Pattern = re.compile(r"^get\s+[^\s]+$")
+put_command_pattern: Pattern = re.compile(r"^put\s+[^\s]+$")
+summary_command_pattern: Pattern = re.compile(r"^summary\s+[^\s]+$")
+change_command_pattern: Pattern = re.compile(r"^change\s+[^\s]+\s+[^\s]+$")
 
 # custome type to represent the hostname(server name) and the server port
 Address = Tuple[str, int]
@@ -29,18 +37,7 @@ class UDPClient:
                 client_socket.connect((self.server_name, self.server_port))
 
                 # get command from user
-                while (command := input(f"myftp> - {self.mode} - : ")) not in [
-                    "put",
-                    "get",
-                    "summary",
-                    "change",
-                    "help",
-                    "list",
-                    "bye",
-                ]:
-                    print(
-                        f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change, list and help"
-                    )
+                command = input(f"myftp> - {self.mode} - : ").strip().lower()
 
                 # handling the "bye" command
                 if command == "bye":
@@ -48,12 +45,51 @@ class UDPClient:
                     print(f"myftp> - {self.mode} - Session is terminated")
                     break
 
+                # list files available on the server
                 elif command == "list":
                     client_socket.send(command.encode())
                     encoded_message, server_address = client_socket.recvfrom(4096)
                     file_list = pickle.loads(encoded_message)
                     print(f"Received file list from {server_address}: {file_list}")
                     client_socket.close()
+                    continue
+
+                # help
+                elif command == "help":
+                    continue
+
+                # get command handling
+                elif get_command_pattern.match(command):
+                    _, filename = command.split(" ", 1)
+                    print(
+                        f"myftp> - {self.mode} - : getting file {filename} from the server"
+                    ) if self.debug else None
+
+                # put command handling
+                elif put_command_pattern.match(command):
+                    _, filename = command.split(" ", 1)
+                    print(
+                        f"myftp> - {self.mode} - : putting file {filename} into the server"
+                    ) if self.debug else None
+
+                # summary command handling
+                elif summary_command_pattern.match(command):
+                    _, filename = command.split(" ", 1)
+                    print(
+                        f"myftp> - {self.mode} - : summary file {filename} from the server"
+                    ) if self.debug else None
+
+                # summary command handling
+                elif change_command_pattern.match(command):
+                    _, old_filename, new_filename = command.split()
+                    print(
+                        f"myftp> - {self.mode} - : changing file named {old_filename} into {new_filename} on the server"
+                    ) if self.debug else None
+
+                else:
+                    print(
+                        f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change, list and help. Type help for detailed usage."
+                    )
                     continue
 
                 client_socket.send(command.encode())

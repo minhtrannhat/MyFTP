@@ -33,9 +33,11 @@ class UDPServer:
                     f"myftp> - {self.mode} - received message from client at {clientAddress}: {message_in_utf8}"
                 ) if self.debug else None
 
+                # check for connectivity
                 if message_in_utf8 == "ping":
                     response_message = "pong"
 
+                # list files available on server
                 elif message_in_utf8 == "list":
                     encoded_message = pickle.dumps(
                         get_files_in_directory(self.directory_path)
@@ -63,7 +65,7 @@ class UDPServer:
 
 def get_files_in_directory(directory_path: str) -> list[str]:
     file_list = []
-    for root, _, files in os.walk(directory_path):
+    for _, _, files in os.walk(directory_path):
         for file in files:
             file_list.append(file)
     return file_list

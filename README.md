@@ -2,7 +2,7 @@
 
 ## Dependencies
 
-Zero. Only python standard libs were used.
+Zero. Only python standard libs were used. Tested on Python 3.11
 
 ## Running
 
