@@ -51,11 +51,7 @@ class UDPClient:
 
                 # list files available on the server
                 elif command == "list":
-                    client_socket.send(command.encode())
-                    encoded_message, server_address = client_socket.recvfrom(4096)
-                    file_list = pickle.loads(encoded_message)
-                    print(f"Received file list from {server_address}: {file_list}")
-                    client_socket.close()
+                    self.get_files_list_from_server(client_socket)
                     continue
 
                 # help
@@ -104,6 +100,10 @@ class UDPClient:
                 print(
                     f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
                 )
+            except Exception as error:
+                print(
+                    f"myftp> - {self.mode} - {error} happened."
+                )
             finally:
                 client_socket.close() # type: ignore
 
@@ -139,6 +139,16 @@ class UDPClient:
         finally:
             # Close the socket
             client_socket.close()
+
+    # get list of files currently on the server
+    def get_files_list_from_server(self, client_socket: socket) -> list[str]:
+        client_socket.send("list".encode())
+        encoded_message, server_address = client_socket.recvfrom(4096)
+        file_list = pickle.loads(encoded_message)
+        print(f"Received file list from {server_address}: {file_list}")
+        client_socket.close()
+
+        return file_list
 
 
 def get_address_input() -> Address:
