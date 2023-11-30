@@ -1,3 +1,8 @@
+# Author: Minh Tran and Angelo Reoligio
+# Date: November 30, 2023
+# Description: FTP client (both UDP and TCP implemented)
+
+
 from socket import socket, AF_INET, SOCK_DGRAM
 from typing import Pattern, Tuple
 from argparse import ArgumentParser
