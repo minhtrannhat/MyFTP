@@ -30,11 +30,10 @@ class UDPClient:
         self.debug = debug
 
     def run(self):
+
         # server cannot be reached, stop the client immediately
         if not self.pong_received:
             return
-
-        client_socket = None  # shutup the variableNotBound warning
 
         while True:
             try:
@@ -106,7 +105,7 @@ class UDPClient:
                     f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
                 )
             finally:
-                client_socket.close()
+                client_socket.close() # type: ignore
 
     # ping pong UDP
     def check_udp_server(self):
