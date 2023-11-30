@@ -10,12 +10,20 @@ import os
 import pickle
 import re
 
+
 # patterns for command matchings
 # compiled for extra performance
 get_command_pattern: Pattern = re.compile(r"^get\s+[^\s]+$")
 put_command_pattern: Pattern = re.compile(r"^put\s+[^\s]+$")
 summary_command_pattern: Pattern = re.compile(r"^summary\s+[^\s]+$")
 change_command_pattern: Pattern = re.compile(r"^change\s+[^\s]+\s+[^\s]+$")
+
+# opcodes
+put_request_opcode = "000"
+get_request_opcode = "001"
+change_request_opcode = "010"
+summary_request_opcode = "011"
+help_requrest_opcode = "100"
 
 # custome type to represent the hostname(server name) and the server port
 Address = Tuple[str, int]
