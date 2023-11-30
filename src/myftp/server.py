@@ -8,6 +8,15 @@ from argparse import ArgumentParser
 import os
 import pickle
 
+# Res-code
+correct_put_and_change_request_rescode: str = "000"
+correct_get_request_rescode: str = "001"
+correct_summary_request_rescode: str = "010"
+file_not_error_rescode: str = "011"
+unknown_request_rescode: str = "100"
+unsuccessful_change_rescode: str = "101"
+help_rescode: str = "110"
+
 
 class UDPServer:
     def __init__(
