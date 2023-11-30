@@ -35,3 +35,8 @@ You can run `python3 src/myftp/server.py --directory <insert valid directory tha
 - Run the client with `make client` in a terminal.
 - For the client, when asked to put in the ip address and port number of the server, you can put in `ftp_server 12000` or adjust to your chosen port number. The IP address is resolved by Docker so ftp_server can not be changed.
 - Tear down everything with `make clean`.
+
+#### Fast setup
+
+- Require `tmuxinator` and `tmux`.
+- Type `tmuxinator start .` at the root of this repo.
