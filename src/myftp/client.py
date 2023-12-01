@@ -25,14 +25,16 @@ change_request_opcode: str = "010"
 summary_request_opcode: str = "011"
 help_requrest_opcode: str = "100"
 
-# Res-code
-correct_put_and_change_request_rescode: str = "000"
-correct_get_request_rescode: str = "001"
-correct_summary_request_rescode: str = "010"
-file_not_error_rescode: str = "011"
-unknown_request_rescode: str = "100"
-unsuccessful_change_rescode: str = "101"
-help_rescode: str = "110"
+# Res-code dict
+rescode_dict: dict[str, str] = {
+    "000": "Put/Change Request Successful",
+    "001": "Get Request Successful",
+    "010": "Summary Request Successful",
+    "011": "File Not Found Error",
+    "100": "Unknown Request",
+    "101": "Change Unsuccessful Error",
+    "110": "Help"
+}
 
 # custome type to represent the hostname(server name) and the server port
 Address = Tuple[str, int]
@@ -74,35 +76,35 @@ class UDPClient:
                 elif command == "help":
                     request_payload: str = help_requrest_opcode + "00000"
                     print(
-                        f"myftp> - {self.mode} - : asking for help from the server"
+                        f"myftp> - {self.mode} - Asking for help from the server"
                     ) if self.debug else None
 
                 # get command handling
                 elif get_command_pattern.match(command):
                     _, filename = command.split(" ", 1)
                     print(
-                        f"myftp> - {self.mode} - : getting file {filename} from the server"
+                        f"myftp> - {self.mode} - : Getting file {filename} from the server"
                     ) if self.debug else None
 
                 # put command handling
                 elif put_command_pattern.match(command):
                     _, filename = command.split(" ", 1)
                     print(
-                        f"myftp> - {self.mode} - : putting file {filename} into the server"
+                        f"myftp> - {self.mode} - : Putting file {filename} into the server"
                     ) if self.debug else None
 
                 # summary command handling
                 elif summary_command_pattern.match(command):
                     _, filename = command.split(" ", 1)
                     print(
-                        f"myftp> - {self.mode} - : summary file {filename} from the server"
+                        f"myftp> - {self.mode} - : Summary file {filename} from the server"
                     ) if self.debug else None
 
                 # change command handling
                 elif change_command_pattern.match(command):
                     _, old_filename, new_filename = command.split()
                     print(
-                        f"myftp> - {self.mode} - : changing file named {old_filename} into {new_filename} on the server"
+                        f"myftp> - {self.mode} - : Changing file named {old_filename} into {new_filename} on the server"
                     ) if self.debug else None
 
                 else:
@@ -113,9 +115,9 @@ class UDPClient:
 
                 client_socket.sendto(request_payload.encode("utf-8"), (self.server_name, self.server_port))
 
-                modified_message = client_socket.recv(2048)[1:]
+                response_payload = client_socket.recv(2048)
 
-                print(modified_message.decode())
+                self.parse_response_payload(response_payload)
 
         except ConnectionRefusedError:
             print(
@@ -170,6 +172,32 @@ class UDPClient:
         client_socket.close()
 
         return file_list
+
+    def parse_response_payload(self,
+                               response_payload: bytes):
+
+        # we want to get the first byte as a string i.e "01010010"
+        first_byte: str = bin(response_payload[0])[2:].zfill(8)
+        rescode: str = first_byte[:3]
+        response_data_length: int = int(first_byte[-5:], 2)
+        response_data: bytes = response_payload[1:]
+
+        print(
+            f"myftp> - {self.mode} - First_byte from server response: {first_byte}. Rescode: {rescode}. Data length: {response_data_length}"
+        ) if self.debug else None
+
+        try:
+            print(
+                f"myftp> - {self.mode} - Res-code meaning: {rescode_dict[rescode]}"
+            ) if self.debug else None
+        except KeyError:
+            print(
+                f"myftp> - {self.mode} - Res-code does not have meaning"
+            )
+
+        print(
+            f"myftp> - {self.mode} - {response_data.decode()}"
+        )
 
 
 def get_address_input() -> Address:

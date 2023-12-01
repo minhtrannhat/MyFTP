@@ -40,7 +40,7 @@ class UDPServer:
         self.server_socket.bind((self.server_name, self.server_port))
 
         print(
-            f"myftp> - {self.mode} - server is ready to receive at {self.server_name}:{self.server_port}"
+            f"myftp> - {self.mode} - Server is ready to receive at {self.server_name}:{self.server_port}"
         ) if self.debug else None
 
         shut_down = False
@@ -51,12 +51,21 @@ class UDPServer:
                 request_payload = message.decode()
 
                 print(
-                    f"myftp> - {self.mode} - received message from client at {clientAddress}: {request_payload}"
+                    f"myftp> - {self.mode} ------------------------------------------------------------------"
+                ) if self.debug else None
+
+                print(
+                    f"myftp> - {self.mode} - Received message from client at {clientAddress}: {request_payload}"
                 ) if self.debug else None
 
                 # check for connectivity
                 if request_payload == "ping":
                     self.server_socket.sendto("pong".encode(), clientAddress)
+
+                    print(
+                        f"myftp> - {self.mode} - pong sent back to client"
+                    ) if self.debug else None
+
                     continue
 
                 # list files available on server
@@ -70,8 +79,9 @@ class UDPServer:
                 # help request handling
                 elif request_payload == help_requrest_opcode + "00000":
                     print(
-                        f"myftp> - {self.mode} - received help request"
+                        f"myftp> - {self.mode} - Client message parsed. Received help request"
                     ) if self.debug else None
+
                     rescode = help_rescode
                     response_data_string = "get,put,summary,change,help,bye"
 
@@ -84,21 +94,23 @@ class UDPServer:
                 self.server_socket.sendto(payload, clientAddress)
 
                 print(
-                    f"myftp> - {self.mode} - sent message to client at {clientAddress}: {payload}"
+                    f"myftp> - {self.mode} - Sent message to client at {clientAddress}: {payload}"
                 ) if self.debug else None
 
         except KeyboardInterrupt:
             shut_down = True
             self.server_socket.close()
-            print(f"myftp> - {self.mode} - Server shutting down\n")
+            print(f"myftp> - {self.mode} - Server shutting down")
 
         finally:
-            print(f"myftp> - {self.mode} - Closed the server socket\n")
+            print(f"myftp> - {self.mode} - Closed the server socket")
 
     # assembling the payload to send back to the client
     def build_res_payload(self,
-                            rescode: str,
-                            response_data_string: str) -> bytes:
+                          rescode: str,
+                          response_data_string: str) -> bytes:
+
+        print(f"myftp> - {self.mode} - Assembling response payload to be sent back to the client")
 
         bytes_response_data = response_data_string.encode("utf-8")
 
