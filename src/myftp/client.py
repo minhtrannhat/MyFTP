@@ -19,11 +19,20 @@ summary_command_pattern: Pattern = re.compile(r"^summary\s+[^\s]+$")
 change_command_pattern: Pattern = re.compile(r"^change\s+[^\s]+\s+[^\s]+$")
 
 # opcodes
-put_request_opcode = "000"
-get_request_opcode = "001"
-change_request_opcode = "010"
-summary_request_opcode = "011"
-help_requrest_opcode = "100"
+put_request_opcode:str = "000"
+get_request_opcode:str = "001"
+change_request_opcode: str = "010"
+summary_request_opcode: str = "011"
+help_requrest_opcode: str = "100"
+
+# Res-code
+correct_put_and_change_request_rescode: str = "000"
+correct_get_request_rescode: str = "001"
+correct_summary_request_rescode: str = "010"
+file_not_error_rescode: str = "011"
+unknown_request_rescode: str = "100"
+unsuccessful_change_rescode: str = "101"
+help_rescode: str = "110"
 
 # custome type to represent the hostname(server name) and the server port
 Address = Tuple[str, int]
@@ -64,7 +73,10 @@ class UDPClient:
 
                 # help
                 elif command == "help":
-                    continue
+                    request_payload: str = help_requrest_opcode + "00000"
+                    print(
+                        f"myftp> - {self.mode} - : asking for help from the server"
+                    ) if self.debug else None
 
                 # get command handling
                 elif get_command_pattern.match(command):
@@ -87,7 +99,7 @@ class UDPClient:
                         f"myftp> - {self.mode} - : summary file {filename} from the server"
                     ) if self.debug else None
 
-                # summary command handling
+                # change command handling
                 elif change_command_pattern.match(command):
                     _, old_filename, new_filename = command.split()
                     print(
@@ -100,9 +112,10 @@ class UDPClient:
                     )
                     continue
 
-                client_socket.send(command.encode())
-                modified_message = client_socket.recv(2048)
+                client_socket.send(request_payload.encode("utf-8"))
+                modified_message = client_socket.recv(2048)[1:]
                 print(modified_message.decode())
+                client_socket.close() # type: ignore
 
             except ConnectionRefusedError:
                 print(
@@ -112,8 +125,6 @@ class UDPClient:
                 print(
                     f"myftp> - {self.mode} - {error} happened."
                 )
-            finally:
-                client_socket.close() # type: ignore
 
     # ping pong UDP
     def check_udp_server(self):
@@ -170,9 +181,7 @@ def get_address_input() -> Address:
 
             # Ensure there are exactly two parts
             if len(input_parts) != 2:
-                raise ValueError(
-                    "myftp>Invalid input. Please enter a servername/hostname/ip address as a string and the port number as an integer separated by a space."
-                )
+                raise ValueError
 
             # Extract the values and create the tuple
             string_part, int_part = input_parts
@@ -183,7 +192,7 @@ def get_address_input() -> Address:
 
         except ValueError as e:
             print(
-                f"Error: {e}. Invalid input. Please enter a servername/hostname/ip address as a string and the port number as an integer separated by a space."
+                f"Error: Invalid input. Please enter a servername/hostname/ip address as a string and the port number as an integer separated by a space."
             )
 
 

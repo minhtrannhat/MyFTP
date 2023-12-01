@@ -17,6 +17,13 @@ unknown_request_rescode: str = "100"
 unsuccessful_change_rescode: str = "101"
 help_rescode: str = "110"
 
+# opcodes
+put_request_opcode: str = "000"
+get_request_opcode: str = "001"
+change_request_opcode: str = "010"
+summary_request_opcode: str = "011"
+help_requrest_opcode: str = "100"
+
 
 class UDPServer:
     def __init__(
@@ -41,32 +48,44 @@ class UDPServer:
         try:
             while not shut_down:
                 message, clientAddress = self.server_socket.recvfrom(2048)
-                message_in_utf8 = message.decode()
+                request_payload = message.decode()
 
                 print(
-                    f"myftp> - {self.mode} - received message from client at {clientAddress}: {message_in_utf8}"
+                    f"myftp> - {self.mode} - received message from client at {clientAddress}: {request_payload}"
                 ) if self.debug else None
 
                 # check for connectivity
-                if message_in_utf8 == "ping":
-                    response_message = "pong"
+                if request_payload == "ping":
+                    self.server_socket.sendto("pong".encode(), clientAddress)
+                    continue
 
                 # list files available on server
-                elif message_in_utf8 == "list":
+                elif request_payload == "list":
                     encoded_message = pickle.dumps(
                         get_files_in_directory(self.directory_path)
                     )
                     self.server_socket.sendto(encoded_message, clientAddress)
                     continue
 
+                # help request handling
+                elif request_payload == help_requrest_opcode + "00000":
+                    print(
+                        f"myftp> - {self.mode} - received help request"
+                    ) if self.debug else None
+                    rescode = help_rescode
+                    response_data_string = "get,put,summary,change,help,bye"
+
                 else:
-                    response_message = message_in_utf8.upper()
+                    # handle unrecognized request here
+                    pass
+
+                payload: bytes = self.build_res_payload(rescode, response_data_string)
+
+                self.server_socket.sendto(payload, clientAddress)
 
                 print(
-                    f"myftp> - {self.mode} - sent message to client at {clientAddress}: {response_message}"
+                    f"myftp> - {self.mode} - sent message to client at {clientAddress}: {payload}"
                 ) if self.debug else None
-
-                self.server_socket.sendto(response_message.encode(), clientAddress)
 
         except KeyboardInterrupt:
             shut_down = True
@@ -75,6 +94,40 @@ class UDPServer:
 
         finally:
             print(f"myftp> - {self.mode} - Closed the server socket\n")
+
+    # assembling the payload to send back to the client
+    def build_res_payload(self,
+                            rescode: str,
+                            response_data_string: str) -> bytes:
+
+        bytes_response_data = response_data_string.encode("utf-8")
+
+        data_len = len(bytes_response_data)
+
+        print(f"myftp> - {self.mode} - Rescode {rescode}") if self.debug else None
+        print(f"myftp> - {self.mode} - Length of data {data_len}") if self.debug else None
+        print(f"myftp> - {self.mode} - Data {response_data_string}") if self.debug else None
+
+        # convert to binary
+        try:
+            # pad the length of data to make sure it is always 5 bits
+            # i.e "010" -> "00010"
+            binary_data_len: str = bin(data_len).zfill(5)
+
+            print(f"myftp> - {self.mode} - binary_data_len {binary_data_len[2:]}") if self.debug else None
+
+            # create the first byte
+            # since binary_data_len is of the format 0b00100, we have to remove the first two characters 0b
+            first_byte: bytes = bytes([int(rescode + binary_data_len[2:], 2)])
+
+            print(f"myftp> - {self.mode} - First byte assembled for rescode {rescode}: {bin(int.from_bytes(first_byte, byteorder='big'))[2:]}") if self.debug else None
+
+        except Exception as e:
+            raise Exception(e)
+
+        res_payload = first_byte + bytes_response_data
+
+        return res_payload
 
 
 def get_files_in_directory(directory_path: str) -> list[str]:
