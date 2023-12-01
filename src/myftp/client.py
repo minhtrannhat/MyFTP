@@ -74,7 +74,7 @@ class UDPClient:
 
                 # help
                 elif command == "help":
-                    request_payload: str = help_requrest_opcode + "00000"
+                    request_payload: str = help_requrest_opcode + "00000" # 10000000 
                     print(
                         f"myftp> - {self.mode} - Asking for help from the server"
                     ) if self.debug else None
@@ -113,7 +113,10 @@ class UDPClient:
                     )
                     continue
 
-                client_socket.sendto(request_payload.encode("utf-8"), (self.server_name, self.server_port))
+                # convert the payload to bytes so it can be sent to the server
+                byte_representation_req_payload: bytes = bytes([int(request_payload, 2)])
+
+                client_socket.sendto(byte_representation_req_payload, (self.server_name, self.server_port))
 
                 response_payload = client_socket.recv(2048)
 

@@ -48,7 +48,15 @@ class UDPServer:
         try:
             while not shut_down:
                 message, clientAddress = self.server_socket.recvfrom(2048)
-                request_payload = message.decode()
+
+                # decode for quick and dirty commands like ping and list server files
+                # outside of the scope of the project
+                try:
+                    request_payload = message.decode()
+
+                except UnicodeDecodeError:
+                    # most commands (get, put, summary ...) will be handled by this catch block
+                    request_payload: str = bin(int.from_bytes(message, byteorder='big'))[2:]
 
                 print(
                     f"myftp> - {self.mode} ------------------------------------------------------------------"

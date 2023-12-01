@@ -9,6 +9,9 @@ server:
 client:
 	docker exec -it project-ftp_client-1 python client.py --directory /client_directory --debug 1
 	
+client-no-debug:
+	docker exec -it project-ftp_client-1 python client.py --directory /client_directory
+
 clean:
 	docker-compose down --volumes
 
