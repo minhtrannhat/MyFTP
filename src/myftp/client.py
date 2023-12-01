@@ -52,11 +52,10 @@ class UDPClient:
         if not self.pong_received:
             return
 
-        while True:
-            try:
-                client_socket = socket(AF_INET, SOCK_DGRAM)
-                client_socket.connect((self.server_name, self.server_port))
+        client_socket = socket(AF_INET, SOCK_DGRAM)
 
+        try:
+            while True:
                 # get command from user
                 command = input(f"myftp> - {self.mode} - : ").strip().lower()
 
@@ -112,19 +111,22 @@ class UDPClient:
                     )
                     continue
 
-                client_socket.send(request_payload.encode("utf-8"))
-                modified_message = client_socket.recv(2048)[1:]
-                print(modified_message.decode())
-                client_socket.close() # type: ignore
+                client_socket.sendto(request_payload.encode("utf-8"), (self.server_name, self.server_port))
 
-            except ConnectionRefusedError:
-                print(
-                    f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
-                )
-            except Exception as error:
-                print(
-                    f"myftp> - {self.mode} - {error} happened."
-                )
+                modified_message = client_socket.recv(2048)[1:]
+
+                print(modified_message.decode())
+
+        except ConnectionRefusedError:
+            print(
+                f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
+            )
+        except Exception as error:
+            print(
+                f"myftp> - {self.mode} - {error} happened."
+            )
+        finally:
+            client_socket.close()
 
     # ping pong UDP
     def check_udp_server(self):
