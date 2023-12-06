@@ -16,6 +16,18 @@ By default, the server IP address or hostname or server name will be `0.0.0.0` o
 
 You can run `python3 src/myftp/server.py --directory <insert valid directory that you have read/write permissions>` to start the server or `python3 src/myftp/server.py --ip_addr <insert ip addr of the server> --port_number <insert port number here> --debug 1 --directory <insert valid directory that you have read/write permissions>` for debugging purposes and to specify the port number.
 
+## Localhost testing
+
+Checkout this repo, go the root of the repo.
+
+### Client
+
+Run `python3 src/myftp/client.py --debug 1 --directory client_directory`
+
+### Server
+
+Run `python3 src/myftp/server.py --debug 1 --directory server_directory`
+
 ## Testing with Docker
 
 ### Dependencies
