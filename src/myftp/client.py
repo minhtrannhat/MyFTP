@@ -6,8 +6,8 @@
 from socket import socket, AF_INET, SOCK_DGRAM
 from typing import Pattern, Tuple
 from argparse import ArgumentParser
+import traceback
 import os
-import pickle
 import re
 
 
@@ -19,104 +19,119 @@ summary_command_pattern: Pattern = re.compile(r"^summary\s+[^\s]+$")
 change_command_pattern: Pattern = re.compile(r"^change\s+[^\s]+\s+[^\s]+$")
 
 # opcodes
-put_request_opcode:str = "000"
-get_request_opcode:str = "001"
-change_request_opcode: str = "010"
-summary_request_opcode: str = "011"
-help_requrest_opcode: str = "100"
+put_request_opcode: int = 0b000
+get_request_opcode: int = 0b001
+change_request_opcode: int = 0b010
+summary_request_opcode: int = 0b011
+help_request_opcode: int = 0b100
 
 # Res-code dict
-rescode_dict: dict[str, str] = {
-    "000": "Put/Change Request Successful",
-    "001": "Get Request Successful",
-    "010": "Summary Request Successful",
-    "011": "File Not Found Error",
-    "100": "Unknown Request",
-    "101": "Change Unsuccessful Error",
-    "110": "Help"
+rescode_dict: dict[int, str] = {
+    0b011: "File Not Found Error",
+    0b100: "Unknown Request",
+    0b101: "Change Unsuccessful Error",
+    0b000: "Put/Change Request Successful",
+    0b001: "Get Request Successful",
+    0b010: "Summary Request Successful",
+    0b110: "Help",
 }
+
 
 # custome type to represent the hostname(server name) and the server port
 Address = Tuple[str, int]
 
 
-class UDPClient:
-    def __init__(self, server_name: str, server_port: int, debug: bool):
+class Client:
+    def __init__(
+        self,
+        server_name: str,
+        server_port: int,
+        directory_path: str,
+        debug: bool,
+        protocol: str,
+    ):
         self.server_name: str = server_name
         self.server_port: int = server_port
-        self.mode: str = "UDP"
-        self.pong_received: bool = False
+        self.protocol: str = protocol
+        self.directory_path = directory_path
         self.debug = debug
 
     def run(self):
-
-        # server cannot be reached, stop the client immediately
-        if not self.pong_received:
-            return
-
         client_socket = socket(AF_INET, SOCK_DGRAM)
+        client_socket.settimeout(10)
 
         try:
             while True:
                 # get command from user
-                command = input(f"myftp> - {self.mode} - : ").strip().lower()
+                command = input(f"myftp> - {self.protocol} - : ").strip().lower()
 
                 # handling the "bye" command
                 if command == "bye":
                     client_socket.close()
-                    print(f"myftp> - {self.mode} - Session is terminated")
+                    print(f"myftp> - {self.protocol} - Session is terminated")
                     break
-
-                # list files available on the server
-                elif command == "list":
-                    self.get_files_list_from_server(client_socket)
-                    continue
 
                 # help
                 elif command == "help":
-                    request_payload: str = help_requrest_opcode + "00000" # 10000000 
+                    first_byte: int = help_request_opcode << 5
+                    command_name = "help"
+
                     print(
-                        f"myftp> - {self.mode} - Asking for help from the server"
+                        f"myftp> - {self.protocol} - Asking for help from the server"
                     ) if self.debug else None
 
                 # get command handling
                 elif get_command_pattern.match(command):
-                    _, filename = command.split(" ", 1)
+                    command_name, filename = command.split(" ", 1)
+
+                    first_byte = (get_request_opcode << 5) + len(filename)
+
+                    second_byte_to_n_byte: bytes = filename.encode("ascii")
+
                     print(
-                        f"myftp> - {self.mode} - : Getting file {filename} from the server"
+                        f"myftp> - {self.protocol} - Getting file {filename} from the server"
                     ) if self.debug else None
 
                 # put command handling
                 elif put_command_pattern.match(command):
                     _, filename = command.split(" ", 1)
                     print(
-                        f"myftp> - {self.mode} - : Putting file {filename} into the server"
+                        f"myftp> - {self.protocol} - Putting file {filename} into the server"
                     ) if self.debug else None
 
                 # summary command handling
                 elif summary_command_pattern.match(command):
                     _, filename = command.split(" ", 1)
                     print(
-                        f"myftp> - {self.mode} - : Summary file {filename} from the server"
+                        f"myftp> - {self.protocol} - Summary file {filename} from the server"
                     ) if self.debug else None
 
                 # change command handling
                 elif change_command_pattern.match(command):
                     _, old_filename, new_filename = command.split()
                     print(
-                        f"myftp> - {self.mode} - : Changing file named {old_filename} into {new_filename} on the server"
+                        f"myftp> - {self.protocol} - Changing file named {old_filename} into {new_filename} on the server"
                     ) if self.debug else None
 
                 else:
                     print(
-                        f"myftp> - {self.mode} - : Invalid command. Supported commands are put, get, summary, change, list and help. Type help for detailed usage."
+                        f"myftp> - {self.protocol} - Invalid command. Supported commands are put, get, summary, change, list and help. Type help for detailed usage."
                     )
                     continue
 
-                # convert the payload to bytes so it can be sent to the server
-                byte_representation_req_payload: bytes = bytes([int(request_payload, 2)])
+                # get or put case
+                if command_name == "get" or command_name == "put":
+                    payload = first_byte.to_bytes(1, "big") + second_byte_to_n_byte
 
-                client_socket.sendto(byte_representation_req_payload, (self.server_name, self.server_port))
+                # help case
+                else:
+                    payload: bytes = first_byte.to_bytes(1, "big")
+
+                print(
+                    f"myftp> - {self.protocol} - sent payload {bin(int.from_bytes(payload, byteorder='big'))[2:]} to the server"
+                ) if self.debug else None
+
+                client_socket.sendto(payload, (self.server_name, self.server_port))
 
                 response_payload = client_socket.recv(2048)
 
@@ -124,83 +139,86 @@ class UDPClient:
 
         except ConnectionRefusedError:
             print(
-                f"myftp> - {self.mode} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
+                f"myftp> - {self.protocol} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
             )
-        except Exception as error:
-            print(
-                f"myftp> - {self.mode} - {error} happened."
-            )
-        finally:
-            client_socket.close()
-
-    # ping pong UDP
-    def check_udp_server(self):
-        # Create a UDP socket
-        client_socket = socket(AF_INET, SOCK_DGRAM)
-        # will time out after 5 seconds
-        client_socket.settimeout(5)
-
-        try:
-            # Send a test message to the server
-            message = b"ping"
-            client_socket.sendto(message, (self.server_name, self.server_port))
-
-            # Receive the response
-            data, _ = client_socket.recvfrom(1024)
-
-            # If the server responds, consider the address valid
-            print(
-                f"myftp> - {self.mode} - Server at {self.server_name}:{self.server_port} is valid. Response received: {data.decode('utf-8')}"
-            )
-
-            # code reached here meaning no problem with the connection
-            self.pong_received = True
 
         except TimeoutError:
             # Server did not respond within the specified timeout
             print(
-                f"myftp> - {self.mode} - Server at {self.server_name} did not respond within 5 seconds. Check the address or server status."
+                f"myftp> - {self.protocol} - Server at {self.server_name} did not respond within 5 seconds. Check the address or server status."
             )
 
+        except Exception as error:
+            traceback_info = traceback.format_exc()
+
+            print(f"myftp> - {self.protocol} - {error} happened.")
+
+            print(traceback_info)
+
         finally:
-            # Close the socket
             client_socket.close()
 
-    # get list of files currently on the server
-    def get_files_list_from_server(self, client_socket: socket) -> list[str]:
-        client_socket.send("list".encode())
-        encoded_message, server_address = client_socket.recvfrom(4096)
-        file_list = pickle.loads(encoded_message)
-        print(f"Received file list from {server_address}: {file_list}")
-        client_socket.close()
-
-        return file_list
-
-    def parse_response_payload(self,
-                               response_payload: bytes):
-
-        # we want to get the first byte as a string i.e "01010010"
-        first_byte: str = bin(response_payload[0])[2:].zfill(8)
-        rescode: str = first_byte[:3]
-        response_data_length: int = int(first_byte[-5:], 2)
-        response_data: bytes = response_payload[1:]
+    def parse_response_payload(self, response_payload: bytes):
+        first_byte = bytes([response_payload[0]])
+        first_byte_binary = int.from_bytes(first_byte, "big")
+        rescode = first_byte_binary >> 5
+        filename_length = first_byte_binary & 0b00011111
+        response_data = response_payload[1:]
+        response_data_length = len(response_data)
 
         print(
-            f"myftp> - {self.mode} - First_byte from server response: {first_byte}. Rescode: {rescode}. Data length: {response_data_length}"
+            f"myftp> - {self.protocol} - First_byte from server response: {first_byte}. Rescode: {rescode}. File name length: {filename_length}. Data length: {response_data_length}"
         ) if self.debug else None
 
         try:
             print(
-                f"myftp> - {self.mode} - Res-code meaning: {rescode_dict[rescode]}"
+                f"myftp> - {self.protocol} - Res-code meaning: {rescode_dict[rescode]}"
             ) if self.debug else None
         except KeyError:
+            print(f"myftp> - {self.protocol} - Res-code does not have meaning")
+
+        # error rescodes
+        if rescode in [0b011, 0b100, 0b101]:
+            print(f"myftp> - {self.protocol} - {rescode_dict[rescode]}")
+
+        # successful rescodes
+        else:
+            if rescode == 0b110:
+                print(f"myftp> - {self.protocol} - {response_data.decode('ascii')}")
+            else:
+                self.handle_get_response_from_server(filename_length, response_data)
+
+    def handle_get_response_from_server(
+        self, filename_length: int, response_data: bytes
+    ):
+        """
+        response_data is
+        file name (filename_length bytes) +
+        file size (4 bytes) +
+        file content (rest of the bytes)
+        """
+        try:
+            filename = response_data[:filename_length].decode("ascii")
+            file_size = int.from_bytes(
+                response_data[filename_length : filename_length + 4], "big"
+            )
+            file_content = response_data[
+                filename_length + 4 : filename_length + 4 + file_size
+            ]
+
             print(
-                f"myftp> - {self.mode} - Res-code does not have meaning"
+                f"myftp> - {self.protocol} - Filename: {filename}, File_size: {file_size} bytes"
             )
 
-        print(
-            f"myftp> - {self.mode} - {response_data.decode()}"
-        )
+            with open(os.path.join(self.directory_path, filename), "wb") as file:
+                file.write(file_content)
+
+            print(
+                f"myftp> - {self.protocol} - File {filename} has been downloaded successfully"
+            )
+
+        except Exception:
+            raise
 
 
 def get_address_input() -> Address:
@@ -223,9 +241,9 @@ def get_address_input() -> Address:
             # Valid tuple, return it
             return address
 
-        except ValueError as e:
+        except ValueError:
             print(
-                f"Error: Invalid input. Please enter a servername/hostname/ip address as a string and the port number as an integer separated by a space."
+                "Error: Invalid input. Please enter a servername/hostname/ip address as a string and the port number as an integer separated by a space."
             )
 
 
@@ -272,20 +290,29 @@ def init():
         )
         return
 
+    user_supplied_address = get_address_input()
+
     # UDP client selected here
     if protocol_selection == "2":
-        user_supplied_address = get_address_input()
-
-        udp_client = UDPClient(
-            user_supplied_address[0], user_supplied_address[1], args.debug
+        udp_client = Client(
+            user_supplied_address[0],
+            user_supplied_address[1],
+            args.directory,
+            args.debug,
+            "UDP",
         )
-
-        udp_client.check_udp_server()
 
         udp_client.run()
     else:
-        # tcp client here
-        pass
+        tcp_client = Client(
+            user_supplied_address[0],
+            user_supplied_address[1],
+            args.directory,
+            args.debug,
+            "TCP",
+        )
+
+        tcp_client.run()
 
 
 if __name__ == "__main__":

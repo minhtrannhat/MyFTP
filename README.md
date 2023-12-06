@@ -12,7 +12,7 @@ You can run `python3 src/myftp/client.py --directory <insert valid directory tha
 
 ### Server
 
-By default, the server IP address or hostname or server name will be `0.0.0.0` (meaning it will bind to all interfaces). The `--port_number` flag, if not specified will be by default `12000`.
+By default, the server IP address or hostname or server name will be `0.0.0.0` or `localhost` (meaning it will bind to all interfaces). The `--port_number` flag, if not specified will be by default `12000`.
 
 You can run `python3 src/myftp/server.py --directory <insert valid directory that you have read/write permissions>` to start the server or `python3 src/myftp/server.py --ip_addr <insert ip addr of the server> --port_number <insert port number here> --debug 1 --directory <insert valid directory that you have read/write permissions>` for debugging purposes and to specify the port number.
 

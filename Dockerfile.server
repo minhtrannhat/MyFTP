@@ -9,8 +9,9 @@ WORKDIR /server
 
 # Create files with random content in the /server directory
 RUN mkdir /server_directory
-RUN dd if=/dev/urandom of=/server_directory/file_server.txt bs=1024 count=10
-RUN dd if=/dev/urandom of=/server_directory/image_server.png bs=1024 count=50
+# these files is only 750 bytes
+RUN dd if=/dev/urandom of=/server_directory/file_server.txt bs=1 count=750
+RUN dd if=/dev/urandom of=/server_directory/image_server.png bs=1 count=750
 
 # Start your Python application
 #CMD python server.py --port_number 12000 --debug 1
