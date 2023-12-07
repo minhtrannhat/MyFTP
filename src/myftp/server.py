@@ -29,6 +29,7 @@ op_codes_dict: dict[int, str] = {
     0b010: "change",
     0b011: "summary",
     0b100: "help",
+    0b101: "unknown",
 }
 
 
@@ -103,6 +104,12 @@ class Server:
                         filename = None
                         response_data = None
 
+                elif request_type == "unknown":
+                    rescode = rescode_fail_dict["unknown_request_rescode"]
+                    filename_length = None
+                    filename = None
+                    response_data = None
+
                 res_payload: bytes = self.build_res_payload(
                     rescode=rescode,  # type: ignore
                     filename_length=filename_length,
@@ -143,7 +150,7 @@ class Server:
             )
 
         except KeyError:
-            raise KeyError("Can't find the request type of this payload")
+            raise KeyError("Cant not find the request type")
 
         return request_type, filename_length_in_bytes
 

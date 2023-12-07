@@ -24,6 +24,7 @@ get_request_opcode: int = 0b001
 change_request_opcode: int = 0b010
 summary_request_opcode: int = 0b011
 help_request_opcode: int = 0b100
+unknown_request_opcode: int = 0b101
 
 # Res-code dict
 rescode_dict: dict[int, str] = {
@@ -94,44 +95,49 @@ class Client:
 
                 # put command handling
                 elif put_command_pattern.match(command):
-                    _, filename = command.split(" ", 1)
+                    command_name, filename = command.split(" ", 1)
                     print(
                         f"myftp> - {self.protocol} - Putting file {filename} into the server"
                     ) if self.debug else None
 
                 # summary command handling
                 elif summary_command_pattern.match(command):
-                    _, filename = command.split(" ", 1)
+                    command_name, filename = command.split(" ", 1)
                     print(
                         f"myftp> - {self.protocol} - Summary file {filename} from the server"
                     ) if self.debug else None
 
                 # change command handling
                 elif change_command_pattern.match(command):
-                    _, old_filename, new_filename = command.split()
+                    command_name, old_filename, new_filename = command.split()
                     print(
                         f"myftp> - {self.protocol} - Changing file named {old_filename} into {new_filename} on the server"
                     ) if self.debug else None
 
+                # unknown request, assigned opcode is 0b101
                 else:
-                    print(
-                        f"myftp> - {self.protocol} - Invalid command. Supported commands are put, get, summary, change, list and help. Type help for detailed usage."
-                    )
-                    continue
+                    command_name = None
+                    first_byte: int = unknown_request_opcode << 5
 
                 # get or put case
                 if command_name == "get" or command_name == "put":
-                    payload = first_byte.to_bytes(1, "big") + second_byte_to_n_byte
+                    payload = first_byte.to_bytes(1, "big") + second_byte_to_n_byte  # type: ignore
 
-                # help case
+                elif command_name == "summary":
+                    pass
+
+                elif command == "change":
+                    pass
+
+                # help case and unknown request
                 else:
-                    payload: bytes = first_byte.to_bytes(1, "big")
+                    payload: bytes = first_byte.to_bytes(1, "big")  # type: ignore
 
                 print(
-                    f"myftp> - {self.protocol} - sent payload {bin(int.from_bytes(payload, byteorder='big'))[2:]} to the server"
+                    f"myftp> - {self.protocol} - sent payload {bin(int.from_bytes(payload, byteorder='big'))[2:]} to the server"  # type: ignore
                 ) if self.debug else None
 
-                client_socket.sendto(payload, (self.server_name, self.server_port))
+                client_socket.sendto(payload, (self.server_name, self.server_port))  # type: ignore
 
                 response_payload = client_socket.recv(2048)
 
