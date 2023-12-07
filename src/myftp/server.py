@@ -6,6 +6,7 @@
 from socket import socket, AF_INET, SOCK_DGRAM
 from argparse import ArgumentParser
 from typing import Optional, Tuple
+import traceback
 import os
 
 # Res-codes
@@ -68,7 +69,9 @@ class Server:
 
                 first_byte = bytes([req_payload[0]])
 
-                request_type, filename_length = self.decode_first_byte(first_byte)
+                request_type, filename_length_in_bytes = self.decode_first_byte(
+                    first_byte
+                )
 
                 print(
                     f"myftp> - {self.protocol} - Received message from client at {clientAddress}: {req_payload}"
@@ -83,7 +86,7 @@ class Server:
                     rescode = rescode_success_dict["help_rescode"]
                     response_data = "get,put,summary,change,help,bye".encode("ascii")
                     filename = None
-                    filename_length = None
+                    filename_length_in_bytes = None
 
                 elif request_type == "get":
                     pre_payload = self.process_get_req(req_payload[1:])
@@ -95,24 +98,41 @@ class Server:
                     ):
                         rescode = rescode_success_dict["correct_get_request_rescode"]
                         filename = pre_payload[0]
-                        filename_length = pre_payload[2]
+                        filename_length_in_bytes = pre_payload[2]
                         response_data = pre_payload[1]
 
                     else:
                         rescode = rescode_fail_dict["file_not_error_rescode"]
-                        filename_length = None
+                        filename_length_in_bytes = None
+                        filename = None
+                        response_data = None
+
+                elif request_type == "put":
+                    # put request failed since there wasnt a file sent from client
+                    if filename_length_in_bytes == 0:
+                        rescode = rescode_fail_dict["unsuccessful_change_rescode"]
+                        filename_length_in_bytes = None
+                        filename = None
+                        response_data = None
+
+                    # put request success
+                    else:
+                        rescode = self.process_put_req(
+                            filename_length_in_bytes, req_payload[1:]
+                        )
+                        filename_length_in_bytes = None
                         filename = None
                         response_data = None
 
                 elif request_type == "unknown":
                     rescode = rescode_fail_dict["unknown_request_rescode"]
-                    filename_length = None
+                    filename_length_in_bytes = None
                     filename = None
                     response_data = None
 
                 res_payload: bytes = self.build_res_payload(
                     rescode=rescode,  # type: ignore
-                    filename_length=filename_length,
+                    filename_length=filename_length_in_bytes,
                     filename=filename,  # type: ignore
                     response_data=response_data,  # type:ignore
                 )
@@ -153,6 +173,38 @@ class Server:
             raise KeyError("Cant not find the request type")
 
         return request_type, filename_length_in_bytes
+
+    def process_put_req(self, filename_length: int, req_payload: bytes) -> int:
+        """
+        Reconstruct file put by client
+        """
+        filename = req_payload[:filename_length].decode("ascii")
+        filesize = int.from_bytes(
+            req_payload[filename_length : filename_length + 4], "big"
+        )
+        file_content = req_payload[filename_length + 4 :]
+
+        print(
+            f"myftp> - {self.protocol} - Reconstructing the file {filename} of size {filesize} bytes on the server after the client finished sending"
+        )
+
+        try:
+            with open(os.path.join(self.directory_path, filename), "wb") as file:
+                file.write(file_content)
+
+                print(
+                    f"myftp> - {self.protocol} - File {filename} uploaded successfully"
+                )
+
+                return rescode_success_dict["correct_put_and_change_request_rescode"]
+
+        except Exception as error:
+            traceback_info = traceback.format_exc()
+
+            print(f"myftp> - {self.protocol} - {error} happened.")
+
+            print(traceback_info)
+            return rescode_fail_dict["unsuccessful_change_rescode"]
 
     def process_get_req(
         self, second_byte_to_byte_n: bytes
@@ -219,6 +271,7 @@ class Server:
             if filename is None:
                 second_byte_to_FL_plus_five = None
             else:
+                # get case
                 second_byte_to_FL_plus_five = (
                     filename.encode() + len(response_data).to_bytes(4, "big")
                     if response_data is not None

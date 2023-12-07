@@ -4,7 +4,7 @@
 
 
 from socket import socket, AF_INET, SOCK_DGRAM
-from typing import Pattern, Tuple
+from typing import Pattern, Tuple, Optional
 from argparse import ArgumentParser
 import traceback
 import os
@@ -30,7 +30,7 @@ unknown_request_opcode: int = 0b101
 rescode_dict: dict[int, str] = {
     0b011: "File Not Found Error",
     0b100: "Unknown Request",
-    0b101: "Change Unsuccessful Error",
+    0b101: "Change/Put Unsuccessful Error",
     0b000: "Put/Change Request Successful",
     0b001: "Get Request Successful",
     0b010: "Summary Request Successful",
@@ -87,7 +87,7 @@ class Client:
 
                     first_byte = (get_request_opcode << 5) + len(filename)
 
-                    second_byte_to_n_byte: bytes = filename.encode("ascii")
+                    second_byte_to_n_byte = filename.encode("ascii")
 
                     print(
                         f"myftp> - {self.protocol} - Getting file {filename} from the server"
@@ -96,6 +96,11 @@ class Client:
                 # put command handling
                 elif put_command_pattern.match(command):
                     command_name, filename = command.split(" ", 1)
+
+                    first_byte, second_byte_to_n_byte, data = self.put_payload_handling(
+                        filename
+                    )
+
                     print(
                         f"myftp> - {self.protocol} - Putting file {filename} into the server"
                     ) if self.debug else None
@@ -120,8 +125,15 @@ class Client:
                     first_byte: int = unknown_request_opcode << 5
 
                 # get or put case
-                if command_name == "get" or command_name == "put":
+                if command_name == "get":
                     payload = first_byte.to_bytes(1, "big") + second_byte_to_n_byte  # type: ignore
+
+                elif command_name == "put":
+                    payload = (
+                        first_byte.to_bytes(1, "big") + second_byte_to_n_byte + data  # type: ignore
+                        if second_byte_to_n_byte is not None and data is not None  # type: ignore
+                        else first_byte.to_bytes(1, "big")  # type: ignore
+                    )
 
                 elif command_name == "summary":
                     pass
@@ -189,19 +201,50 @@ class Client:
 
         # successful rescodes
         else:
+            # help rescode and successful change or put rescode
             if rescode == 0b110:
                 print(f"myftp> - {self.protocol} - {response_data.decode('ascii')}")
-            else:
+            elif rescode == 0b000:
+                print(f"myftp> - {self.protocol} - {rescode_dict[rescode]}")
+            # get rescode
+            elif rescode == 0b001:
                 self.handle_get_response_from_server(filename_length, response_data)
+
+    def put_payload_handling(
+        self, filename: str
+    ) -> Tuple[int, Optional[bytes], Optional[bytes]]:
+        """
+        Assemble the pay load to put the file onto server
+
+        Return first_byte, second_byte_to_n_byte and data if successful
+        Or (None, None, None) if file not found
+        """
+        try:
+            with open(os.path.join(self.directory_path, filename), "rb") as file:
+                content = file.read()
+                content_length = len(content)
+
+                first_byte = (put_request_opcode << 5) + len(filename)
+
+                second_byte_to_n_byte = filename.encode(
+                    "ascii"
+                ) + content_length.to_bytes(4, "big")
+
+                data = content
+
+                return (first_byte, second_byte_to_n_byte, data)
+
+        except FileNotFoundError:
+            return ((put_request_opcode << 5), None, None)
 
     def handle_get_response_from_server(
         self, filename_length: int, response_data: bytes
     ):
         """
-        response_data is
-        file name (filename_length bytes) +
-        file size (4 bytes) +
-        file content (rest of the bytes)
+        Response_data is
+        File name (filename_length bytes) +
+        File size (4 bytes) +
+        File content (rest of the bytes)
         """
         try:
             filename = response_data[:filename_length].decode("ascii")
