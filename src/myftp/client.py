@@ -112,6 +112,10 @@ class Client:
                         f"myftp> - {self.protocol} - Summary file {filename} from the server"
                     ) if self.debug else None
 
+                    first_byte = (summary_request_opcode << 5) + len(filename)
+
+                    second_byte_to_n_byte = filename.encode("ascii")
+
                 # change command handling
                 elif change_command_pattern.match(command):
                     command_name, old_filename, new_filename = command.split()
@@ -125,7 +129,7 @@ class Client:
                     first_byte: int = unknown_request_opcode << 5
 
                 # get or put case
-                if command_name == "get":
+                if command_name == "get" or command_name == "summary":
                     payload = first_byte.to_bytes(1, "big") + second_byte_to_n_byte  # type: ignore
 
                 elif command_name == "put":
@@ -134,9 +138,6 @@ class Client:
                         if second_byte_to_n_byte is not None and data is not None  # type: ignore
                         else first_byte.to_bytes(1, "big")  # type: ignore
                     )
-
-                elif command_name == "summary":
-                    pass
 
                 elif command == "change":
                     pass

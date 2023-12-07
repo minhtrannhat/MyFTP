@@ -124,6 +124,20 @@ class Server:
                         filename = None
                         response_data = None
 
+                elif request_type == "summary":
+                    # empty filename error
+                    if filename_length_in_bytes <= 0:
+                        rescode = rescode_fail_dict["file_not_error_rescode"]
+                    else:
+                        (
+                            rescode,
+                            filename,  # "summary.txt"
+                            filename_length_in_bytes,  # of the summary file
+                            response_data,  # summary.txt file content
+                        ) = self.process_summary_req(
+                            filename_length_in_bytes, req_payload[1:]
+                        )
+
                 elif request_type == "unknown":
                     rescode = rescode_fail_dict["unknown_request_rescode"]
                     filename_length_in_bytes = None
@@ -173,6 +187,64 @@ class Server:
             raise KeyError("Cant not find the request type")
 
         return request_type, filename_length_in_bytes
+
+    def process_summary_req(
+        self, filename_length: int, req_payload: bytes
+    ) -> Tuple[int, Optional[str], Optional[int], Optional[bytes]]:
+        """
+        Find the filename mentioned
+        Calculate the min,max,avg
+        Put those numbers into a file called summary.txt
+        """
+        filename = req_payload[:filename_length].decode("ascii")
+
+        print(
+            f"myftp> - {self.protocol} - Summarizing the file named {filename} on the server"
+        )
+
+        try:
+            with open(os.path.join(self.directory_path, filename), "r") as file:
+                numbers = [int(line.strip()) for line in file if line.strip().isdigit()]
+
+                # Find the largest, smallest, and calculate the average
+                largest_number = max(numbers)
+                smallest_number = min(numbers)
+                average_value = sum(numbers) / len(numbers) if numbers else 0
+
+                print(
+                    f"myftp> - {self.protocol} - File {filename} summarized successfully. The max is {largest_number}, the min is {smallest_number}, the average is {average_value}"
+                )
+
+                with open(
+                    os.path.join(self.directory_path, "summary.txt"), "w"
+                ) as summary_file:
+                    summary_file.write(f"min: {smallest_number}\n")
+                    summary_file.write(f"max: {largest_number}\n")
+                    summary_file.write(f"avg: {average_value}\n")
+
+                print(
+                    f"myftp> - {self.protocol} - Created file summary.txt summarized successfully. Sending it back to the client"
+                )
+
+                with open(
+                    os.path.join(self.directory_path, "summary.txt"), "rb"
+                ) as summary_file:
+                    binary_content = summary_file.read()
+
+                return (
+                    rescode_success_dict["correct_summary_request_rescode"],
+                    "summary.txt",
+                    11,
+                    binary_content,
+                )
+
+        except Exception as error:
+            traceback_info = traceback.format_exc()
+
+            print(f"myftp> - {self.protocol} - {error} happened.")
+
+            print(traceback_info)
+            return rescode_fail_dict["file_not_error_rescode"], None, None, None
 
     def process_put_req(self, filename_length: int, req_payload: bytes) -> int:
         """
