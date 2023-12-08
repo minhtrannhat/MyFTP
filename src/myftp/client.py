@@ -119,17 +119,30 @@ class Client:
                 # change command handling
                 elif change_command_pattern.match(command):
                     command_name, old_filename, new_filename = command.split()
+
                     print(
                         f"myftp> - {self.protocol} - Changing file named {old_filename} into {new_filename} on the server"
                     ) if self.debug else None
+
+                    first_byte = (change_request_opcode << 5) + len(old_filename)
+
+                    second_byte_to_n_byte = (
+                        old_filename.encode("ascii")
+                        + len(new_filename).to_bytes(1, "big")
+                        + new_filename.encode("ascii")
+                    )
 
                 # unknown request, assigned opcode is 0b101
                 else:
                     command_name = None
                     first_byte: int = unknown_request_opcode << 5
 
-                # get or put case
-                if command_name == "get" or command_name == "summary":
+                # get change put cases
+                if (
+                    command_name == "get"
+                    or command_name == "summary"
+                    or command_name == "change"
+                ):
                     payload = first_byte.to_bytes(1, "big") + second_byte_to_n_byte  # type: ignore
 
                 elif command_name == "put":
@@ -138,9 +151,6 @@ class Client:
                         if second_byte_to_n_byte is not None and data is not None  # type: ignore
                         else first_byte.to_bytes(1, "big")  # type: ignore
                     )
-
-                elif command == "change":
-                    pass
 
                 # help case and unknown request
                 else:

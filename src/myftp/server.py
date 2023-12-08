@@ -138,6 +138,14 @@ class Server:
                             filename_length_in_bytes, req_payload[1:]
                         )
 
+                elif request_type == "change":
+                    rescode = self.process_change_req(
+                        filename_length_in_bytes, req_payload[1:]
+                    )
+                    filename_length_in_bytes = None
+                    filename = None
+                    response_data = None
+
                 elif request_type == "unknown":
                     rescode = rescode_fail_dict["unknown_request_rescode"]
                     filename_length_in_bytes = None
@@ -187,6 +195,51 @@ class Server:
             raise KeyError("Cant not find the request type")
 
         return request_type, filename_length_in_bytes
+
+    def process_change_req(
+        self, old_filename_length_in_bytes: int, req_payload: bytes
+    ) -> int:
+        old_filename = req_payload[:old_filename_length_in_bytes].decode("ascii")
+        new_filename_length = int.from_bytes(
+            req_payload[
+                old_filename_length_in_bytes : old_filename_length_in_bytes + 1
+            ],
+            "big",
+        )
+        new_filename = req_payload[old_filename_length_in_bytes + 1 :].decode("ascii")
+
+        actual_new_filename_length = len(new_filename)
+
+        try:
+            if new_filename_length <= 31 or actual_new_filename_length <= 31:
+                old_filename_full_path = os.path.normpath(
+                    os.path.join(self.directory_path, old_filename)
+                )
+                new_filename_full_path = os.path.normpath(
+                    os.path.join(self.directory_path, new_filename)
+                )
+
+                print(
+                    f"myftp> - {self.protocol} - Changing file named {old_filename_full_path} to new file {new_filename_full_path}"
+                )
+
+                os.rename(old_filename_full_path, new_filename_full_path)
+
+                return rescode_success_dict["correct_put_and_change_request_rescode"]
+
+            else:
+                print(
+                    f"myftp> - {self.protocol} - New file name longer than 31 characters error"
+                )
+                return rescode_fail_dict["unsuccessful_change_rescode"]
+
+        except Exception as error:
+            traceback_info = traceback.format_exc()
+
+            print(f"myftp> - {self.protocol} - {error} happened.")
+
+            print(traceback_info)
+            return rescode_fail_dict["unsuccessful_change_rescode"]
 
     def process_summary_req(
         self, filename_length: int, req_payload: bytes
@@ -335,7 +388,7 @@ class Server:
             # help case
             elif filename is None and response_data is not None:
                 first_byte = ((rescode << 5) + len(response_data)).to_bytes(1, "big")
-            # unsuccessful cases
+            # other cases
             else:
                 first_byte = (rescode << 5).to_bytes(1, "big")
 
