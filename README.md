@@ -10,6 +10,15 @@ Zero. Only python standard libs were used. Tested on Python 3.11
 
 You can run `python3 src/myftp/client.py --directory <insert valid directory that you have read/write permissions>` to start the client or `python3 src/myftp/client.py --debug 1 --directory <insert valid directory that you have read/write permissions>` for debugging purposes.
 
+Some example test commands:
+
+- `get file_server.txt`
+- `summary numbers.txt`
+- `put file_local.txt`
+- `put image_local.png`
+- `change file_server.txt file_server1.txt`
+- `help`
+
 ### Server
 
 By default, the server IP address or hostname or server name will be `0.0.0.0` or `localhost` (meaning it will bind to all interfaces). The `--port_number` flag, if not specified will be by default `12000`.

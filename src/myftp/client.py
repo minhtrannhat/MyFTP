@@ -3,7 +3,7 @@
 # Description: FTP client (both UDP and TCP implemented)
 
 
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 from typing import Pattern, Tuple, Optional
 from argparse import ArgumentParser
 import traceback
@@ -58,8 +58,15 @@ class Client:
         self.debug = debug
 
     def run(self):
-        client_socket = socket(AF_INET, SOCK_DGRAM)
-        client_socket.settimeout(10)
+        self.client_socket = socket(
+            AF_INET, (SOCK_DGRAM if self.protocol == "UDP" else SOCK_STREAM)
+        )
+        self.client_socket.settimeout(10)
+
+        # only if using TCP
+        self.client_socket.connect(
+            (self.server_name, self.server_port)
+        ) if self.protocol == "TCP" else None
 
         try:
             while True:
@@ -68,7 +75,7 @@ class Client:
 
                 # handling the "bye" command
                 if command == "bye":
-                    client_socket.close()
+                    self.client_socket.close()
                     print(f"myftp> - {self.protocol} - Session is terminated")
                     break
 
@@ -160,9 +167,12 @@ class Client:
                     f"myftp> - {self.protocol} - sent payload {bin(int.from_bytes(payload, byteorder='big'))[2:]} to the server"  # type: ignore
                 ) if self.debug else None
 
-                client_socket.sendto(payload, (self.server_name, self.server_port))  # type: ignore
+                if self.protocol == "UDP":
+                    self.client_socket.sendto(payload, (self.server_name, self.server_port))  # type: ignore
+                else:
+                    self.client_socket.sendall(payload)  # type: ignore
 
-                response_payload = client_socket.recv(2048)
+                response_payload = self.client_socket.recv(2048)
 
                 self.parse_response_payload(response_payload)
 
@@ -185,7 +195,7 @@ class Client:
             print(traceback_info)
 
         finally:
-            client_socket.close()
+            self.client_socket.close()
 
     def parse_response_payload(self, response_payload: bytes):
         first_byte = bytes([response_payload[0]])

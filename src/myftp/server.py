@@ -3,7 +3,7 @@
 # Description: FTP server (both UDP and TCP implemented)
 
 
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 from argparse import ArgumentParser
 from typing import Optional, Tuple
 import traceback
@@ -50,8 +50,14 @@ class Server:
         self.debug = debug
 
     def run(self):
-        self.server_socket = socket(AF_INET, SOCK_DGRAM)
-        self.server_socket.bind((self.server_name, self.server_port))
+        server_socket = socket(
+            AF_INET, (SOCK_DGRAM if self.protocol == "UDP" else SOCK_STREAM)
+        )
+
+        server_socket.bind((self.server_name, self.server_port))
+
+        # only needed for TCP
+        server_socket.listen(5) if self.protocol == "TCP" else None
 
         print(
             f"myftp> - {self.protocol} - Server is ready to receive at {self.server_name}:{self.server_port}"
@@ -60,12 +66,27 @@ class Server:
         shut_down = False
 
         try:
+            if self.protocol == "TCP":
+                client_socket, clientAddress = server_socket.accept()
+
+                print(
+                    f"myftp> - {self.protocol} Connected to TCP client at {clientAddress}"
+                ) if self.debug else None
+
             while not shut_down:
                 print(
                     f"myftp> - {self.protocol} ------------------------------------------------------------------"
                 ) if self.debug else None
 
-                req_payload, clientAddress = self.server_socket.recvfrom(2048)
+                if self.protocol == "UDP":
+                    req_payload, clientAddress = server_socket.recvfrom(2048)
+                else:
+                    req_payload = client_socket.recv(2048)  # type: ignore
+
+                    # TCP client disconnected
+                    if not req_payload:
+                        client_socket.close()  # type: ignore
+                        return
 
                 first_byte = bytes([req_payload[0]])
 
@@ -74,7 +95,7 @@ class Server:
                 )
 
                 print(
-                    f"myftp> - {self.protocol} - Received message from client at {clientAddress}: {req_payload}"
+                    f"myftp> - {self.protocol} - Received message from client at {clientAddress}: {req_payload}"  # type: ignore
                 ) if self.debug else None
 
                 # help request handling
@@ -159,15 +180,22 @@ class Server:
                     response_data=response_data,  # type:ignore
                 )
 
-                self.server_socket.sendto(res_payload, clientAddress)
+                if self.protocol == "UDP":
+                    server_socket.sendto(res_payload, clientAddress)  # type: ignore
+                else:
+                    client_socket.sendall(res_payload)  # type: ignore
 
                 print(
-                    f"myftp> - {self.protocol} - Sent message to client at {clientAddress}: {res_payload}"
+                    f"myftp> - {self.protocol} - Sent message to client at {clientAddress}: {res_payload}"  # type: ignore
                 ) if self.debug else None
 
         except KeyboardInterrupt:
             shut_down = True
-            self.server_socket.close()
+            if self.protocol == "UDP":
+                server_socket.close()
+            else:
+                client_socket.close()  # type: ignore
+
             print(f"myftp> - {self.protocol} - Server shutting down")
 
         finally:
