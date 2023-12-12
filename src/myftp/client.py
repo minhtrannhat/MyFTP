@@ -220,6 +220,8 @@ class Client:
             # get rescode
             elif rescode == 0b001:
                 self.handle_get_response_from_server(filename_length, response_data)
+            elif rescode == 0b010:
+                self.handle_summary_response_from_server(filename_length, response_data)
 
     def put_payload_handling(
         self, filename: str
@@ -249,6 +251,38 @@ class Client:
             return ((put_request_opcode << 5), None, None)
 
     def handle_get_response_from_server(
+        self, filename_length: int, response_data: bytes
+    ):
+        """
+        Response_data is
+        File name (filename_length bytes) +
+        File size (4 bytes) +
+        File content (rest of the bytes)
+        """
+        try:
+            filename = response_data[:filename_length].decode("ascii")
+            file_size = int.from_bytes(
+                response_data[filename_length : filename_length + 4], "big"
+            )
+            file_content = response_data[
+                filename_length + 4 : filename_length + 4 + file_size
+            ]
+
+            print(
+                f"myftp> - {self.protocol} - Filename: {filename}, File_size: {file_size} bytes"
+            )
+
+            with open(os.path.join(self.directory_path, filename), "wb") as file:
+                file.write(file_content)
+
+            print(
+                f"myftp> - {self.protocol} - File {filename} has been downloaded successfully"
+            )
+
+        except Exception:
+            raise
+
+    def handle_summary_response_from_server(
         self, filename_length: int, response_data: bytes
     ):
         """
