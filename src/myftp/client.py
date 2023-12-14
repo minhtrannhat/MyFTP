@@ -198,6 +198,11 @@ class Client:
             self.client_socket.close()
 
     def parse_response_payload(self, response_payload: bytes):
+        """
+        Parse response payload for further processing
+
+        response_payload is the the entire packet that was sent from the server
+        """
         first_byte = bytes([response_payload[0]])
         first_byte_binary = int.from_bytes(first_byte, "big")
         rescode = first_byte_binary >> 5
@@ -218,6 +223,7 @@ class Client:
 
         # error rescodes
         if rescode in [0b011, 0b100, 0b101]:
+            # print to client
             print(f"myftp> - {self.protocol} - {rescode_dict[rescode]}")
 
         # successful rescodes
@@ -230,6 +236,7 @@ class Client:
             # get rescode
             elif rescode == 0b001:
                 self.handle_get_response_from_server(filename_length, response_data)
+            # summary rescode
             elif rescode == 0b010:
                 self.handle_summary_response_from_server(filename_length, response_data)
 
@@ -237,7 +244,7 @@ class Client:
         self, filename: str
     ) -> Tuple[int, Optional[bytes], Optional[bytes]]:
         """
-        Assemble the pay load to put the file onto server
+        Assemble the payload to put the file onto server
 
         Return first_byte, second_byte_to_n_byte and data if successful
         Or (None, None, None) if file not found
@@ -264,6 +271,8 @@ class Client:
         self, filename_length: int, response_data: bytes
     ):
         """
+        Handle the get response from the server
+
         Response_data is
         File name (filename_length bytes) +
         File size (4 bytes) +
@@ -296,6 +305,8 @@ class Client:
         self, filename_length: int, response_data: bytes
     ):
         """
+        Handle summary response from server
+
         Response_data is
         File name (filename_length bytes) +
         File size (4 bytes) +
@@ -397,26 +408,15 @@ def init():
     user_supplied_address = get_address_input()
 
     # UDP client selected here
-    if protocol_selection == "2":
-        udp_client = Client(
-            user_supplied_address[0],
-            user_supplied_address[1],
-            args.directory,
-            args.debug,
-            "UDP",
-        )
+    client = Client(
+        user_supplied_address[0],
+        user_supplied_address[1],
+        args.directory,
+        args.debug,
+        ("UDP" if protocol_selection == "2" else "TCP"),
+    )
 
-        udp_client.run()
-    else:
-        tcp_client = Client(
-            user_supplied_address[0],
-            user_supplied_address[1],
-            args.directory,
-            args.debug,
-            "TCP",
-        )
-
-        tcp_client.run()
+    client.run()
 
 
 if __name__ == "__main__":

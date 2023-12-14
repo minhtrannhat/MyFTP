@@ -227,6 +227,9 @@ class Server:
     def process_change_req(
         self, old_filename_length_in_bytes: int, req_payload: bytes
     ) -> int:
+        """
+        Process change request from client
+        """
         old_filename = req_payload[:old_filename_length_in_bytes].decode("ascii")
         new_filename_length = int.from_bytes(
             req_payload[
@@ -423,6 +426,7 @@ class Server:
             # we only need the firstbyte
             if filename is None:
                 second_byte_to_FL_plus_five = None
+            # second byte and more are needed
             else:
                 # get case
                 second_byte_to_FL_plus_five = (
@@ -435,11 +439,13 @@ class Server:
                 f"myftp> - {self.protocol} - First byte assembled for rescode {format(rescode, '03b')}: {bin(int.from_bytes(first_byte, byteorder='big'))[2:]}"
             ) if self.debug else None
 
+            # get/summary case
             if second_byte_to_FL_plus_five is not None and response_data is not None:
                 res_payload = first_byte + second_byte_to_FL_plus_five + response_data
             # help case
             elif second_byte_to_FL_plus_five is None and response_data is not None:
                 res_payload = first_byte + response_data
+            # change/put case
             else:
                 res_payload = first_byte
 
@@ -507,20 +513,16 @@ def init():
         )
         return
 
-    # UDP client selected here
-    if protocol_selection == "2":
-        udp_server = Server(
-            args.ip_addr, args.port_number, args.directory, args.debug, "UDP"
-        )
+    # start the server
+    server = Server(
+        args.ip_addr,
+        args.port_number,
+        args.directory,
+        args.debug,
+        ("UDP" if protocol_selection == "2" else "TCP"),
+    )
 
-        udp_server.run()
-
-    else:
-        tcp_server = Server(
-            args.ip_addr, args.port_number, args.directory, args.debug, "TCP"
-        )
-
-        tcp_server.run()
+    server.run()
 
 
 if __name__ == "__main__":
