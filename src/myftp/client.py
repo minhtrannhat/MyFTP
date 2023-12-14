@@ -164,7 +164,7 @@ class Client:
                     payload: bytes = first_byte.to_bytes(1, "big")  # type: ignore
 
                 print(
-                    f"myftp> - {self.protocol} - sent payload {bin(int.from_bytes(payload, byteorder='big'))[2:]} to the server"  # type: ignore
+                    f"myftp> - {self.protocol} - sent payload {payload} to the server. Payload length is {len(payload)}"  # type: ignore
                 ) if self.debug else None
 
                 if self.protocol == "UDP":
@@ -280,7 +280,7 @@ class Client:
 
             print(
                 f"myftp> - {self.protocol} - Filename: {filename}, File_size: {file_size} bytes"
-            )
+            ) if self.debug else None
 
             with open(os.path.join(self.directory_path, filename), "wb") as file:
                 file.write(file_content)
@@ -312,7 +312,7 @@ class Client:
 
             print(
                 f"myftp> - {self.protocol} - Filename: {filename}, File_size: {file_size} bytes"
-            )
+            ) if self.debug else None
 
             with open(os.path.join(self.directory_path, filename), "wb") as file:
                 file.write(file_content)

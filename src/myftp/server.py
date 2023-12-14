@@ -95,7 +95,7 @@ class Server:
                 )
 
                 print(
-                    f"myftp> - {self.protocol} - Received message from client at {clientAddress}: {req_payload}"  # type: ignore
+                    f"myftp> - {self.protocol} - Received message from client at {clientAddress}: {req_payload}. Payload length is {len(req_payload)}"  # type: ignore
                 ) if self.debug else None
 
                 # help request handling
@@ -186,7 +186,7 @@ class Server:
                     client_socket.sendall(res_payload)  # type: ignore
 
                 print(
-                    f"myftp> - {self.protocol} - Sent message to client at {clientAddress}: {res_payload}"  # type: ignore
+                    f"myftp> - {self.protocol} - Sent message to client at {clientAddress}: {res_payload}. Payload length is {len(res_payload)}"  # type: ignore
                 ) if self.debug else None
 
         except KeyboardInterrupt:
