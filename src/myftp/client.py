@@ -407,7 +407,6 @@ def init():
 
     user_supplied_address = get_address_input()
 
-    # UDP client selected here
     client = Client(
         user_supplied_address[0],
         user_supplied_address[1],
