@@ -70,7 +70,7 @@ class Server:
                 client_socket, clientAddress = server_socket.accept()
 
                 print(
-                    f"myftp> - {self.protocol} Connected to TCP client at {clientAddress}"
+                    f"myftp> - {self.protocol} - Connected to TCP client at {clientAddress}"
                 ) if self.debug else None
 
             while not shut_down:
@@ -373,6 +373,7 @@ class Server:
         If not, return None, None, None tuple
         """
         filename = second_byte_to_byte_n.decode("ascii")
+        print(f"myftp> - {self.protocol} - trying to find file {filename}")
 
         try:
             with open(os.path.join(self.directory_path, filename), "rb") as file:
@@ -383,6 +384,10 @@ class Server:
 
         except FileNotFoundError:
             print(f"myftp> - {self.protocol} - file {filename} not found")
+            return (None, None, None)
+
+        except IsADirectoryError:
+            print(f"myftp> - {self.protocol} - filename is blank")
             return (None, None, None)
 
     # assembling the payload to send back to the client

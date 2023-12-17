@@ -11,12 +11,15 @@ import os
 import re
 
 
-# patterns for command matchings
-# compiled for extra performance
-get_command_pattern: Pattern = re.compile(r"^get\s+[^\s]+$")
-put_command_pattern: Pattern = re.compile(r"^put\s+[^\s]+$")
-summary_command_pattern: Pattern = re.compile(r"^summary\s+[^\s]+$")
-change_command_pattern: Pattern = re.compile(r"^change\s+[^\s]+\s+[^\s]+$")
+# Patterns for command matchings
+# - compiled for extra performance
+# - Ignore case, get or GET both works
+get_command_pattern: Pattern = re.compile(r"^get\s+[^\s]+$", re.IGNORECASE)
+put_command_pattern: Pattern = re.compile(r"^put\s+[^\s]+$", re.IGNORECASE)
+summary_command_pattern: Pattern = re.compile(r"^summary\s+[^\s]+$", re.IGNORECASE)
+change_command_pattern: Pattern = re.compile(
+    r"^change\s+[^\s]+\s+[^\s]+$", re.IGNORECASE
+)
 
 # opcodes
 put_request_opcode: int = 0b000
@@ -64,23 +67,29 @@ class Client:
         self.client_socket.settimeout(10)
 
         # only if using TCP
-        self.client_socket.connect(
-            (self.server_name, self.server_port)
-        ) if self.protocol == "TCP" else None
+        try:
+            self.client_socket.connect(
+                (self.server_name, self.server_port)
+            ) if self.protocol == "TCP" else None
+        except ConnectionRefusedError:
+            print(
+                f"myftp> - {self.protocol} - ConnectionRefusedError happened. Please restart the client program, make sure the server is running and/or put a different server name and server port."
+            )
+            return
 
         try:
             while True:
                 # get command from user
-                command = input(f"myftp> - {self.protocol} - : ").strip().lower()
+                command = input(f"myftp> - {self.protocol} - : ").strip()
 
                 # handling the "bye" command
-                if command == "bye":
+                if command == "bye" or command == "BYE":
                     self.client_socket.close()
                     print(f"myftp> - {self.protocol} - Session is terminated")
                     break
 
                 # help
-                elif command == "help":
+                elif command == "help" or command == "HELP":
                     first_byte: int = help_request_opcode << 5
                     command_name = "help"
 
@@ -90,7 +99,8 @@ class Client:
 
                 # get command handling
                 elif get_command_pattern.match(command):
-                    command_name, filename = command.split(" ", 1)
+                    _, filename = command.split(" ", 1)
+                    command_name = "get"
 
                     first_byte = (get_request_opcode << 5) + len(filename)
 
@@ -102,7 +112,8 @@ class Client:
 
                 # put command handling
                 elif put_command_pattern.match(command):
-                    command_name, filename = command.split(" ", 1)
+                    _, filename = command.split(" ", 1)
+                    command_name = "put"
 
                     first_byte, second_byte_to_n_byte, data = self.put_payload_handling(
                         filename
@@ -114,7 +125,9 @@ class Client:
 
                 # summary command handling
                 elif summary_command_pattern.match(command):
-                    command_name, filename = command.split(" ", 1)
+                    _, filename = command.split(" ", 1)
+                    command_name = "summary"
+
                     print(
                         f"myftp> - {self.protocol} - Summary file {filename} from the server"
                     ) if self.debug else None
@@ -125,7 +138,8 @@ class Client:
 
                 # change command handling
                 elif change_command_pattern.match(command):
-                    command_name, old_filename, new_filename = command.split()
+                    _, old_filename, new_filename = command.split()
+                    command_name = "change"
 
                     print(
                         f"myftp> - {self.protocol} - Changing file named {old_filename} into {new_filename} on the server"
@@ -168,7 +182,9 @@ class Client:
                 ) if self.debug else None
 
                 if self.protocol == "UDP":
-                    self.client_socket.sendto(payload, (self.server_name, self.server_port))  # type: ignore
+                    self.client_socket.sendto(
+                        payload, (self.server_name, self.server_port)
+                    )  # type: ignore
                 else:
                     self.client_socket.sendall(payload)  # type: ignore
 
@@ -186,6 +202,9 @@ class Client:
             print(
                 f"myftp> - {self.protocol} - Server at {self.server_name} did not respond within 5 seconds. Check the address or server status."
             )
+
+        except KeyboardInterrupt:
+            print(f"\nmyftp> - {self.protocol} - Client shutting down")
 
         except Exception as error:
             traceback_info = traceback.format_exc()
