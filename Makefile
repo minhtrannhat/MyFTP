@@ -15,3 +15,8 @@ client-no-debug:
 clean:
 	docker-compose down --volumes
 
+docker-client:
+	docker exec -it project-ftp_client-1 bash
+
+docker-server:
+	docker exec -it project-ftp_server-1 bash
