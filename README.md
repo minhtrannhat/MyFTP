@@ -2,13 +2,17 @@
 
 A Python implementation of a FTP client - server. Supports both TCP and UDP protocols. Tested on Python 3.11 and Python 3.10.
 
+All specfications regarding opcodes, return codes and payload are included in the pdf at the root of the repo `./project_coen366.pdf`
+
 ## Dependencies
 
-Zero. Only python standard libs were used. 
+Zero. Only python standard libs were used.
 
 ## Running
 
 ### Client
+
+Always start the FTP server before starting the FTP client.
 
 You can run `python3 src/myftp/client.py --directory <insert valid directory that you have read/write permissions>` to start the client.
 
