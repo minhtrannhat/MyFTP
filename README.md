@@ -1,6 +1,6 @@
 # MyFTP
 
-A Python implementation of a FTP server. Supports both TCP and UDP protocols. Tested on Python 3.11 and Python 3.10.
+A Python implementation of a FTP client - server. Supports both TCP and UDP protocols. Tested on Python 3.11 and Python 3.10.
 
 ## Dependencies
 
@@ -53,6 +53,7 @@ Run `python3 src/myftp/server.py --debug 1 --directory server_directory`
 
 ### Setup
 
+- `git clone https://github.com/minhtrannhat/MyFTP.git project`
 - Make you are at the root of this repo.
 - Build the system with `make build`.
 - Wait 10 seconds.
